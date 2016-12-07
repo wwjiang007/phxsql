@@ -169,7 +169,7 @@ int MySqlManager::CheckUserGrantExist(const string &username, const string &pwd,
                                       const string &grant_flag_string) {
 
     MySqlOption mysql_option;
-    mysql_option.ip = "127.0.0.1";
+    mysql_option.ip = option_->GetBinLogSvrConfig()->GetEngineIP();
     mysql_option.port = option_->GetMySqlConfig()->GetMySQLPort();
     mysql_option.username = username;
     mysql_option.pwd = pwd;
@@ -298,23 +298,20 @@ int MySqlManager::CreateAdmin(const string &admin_username, const string &admin_
     LogVerbose("%s create user %s done", __func__, admin_username.c_str());
 
     if (admin_username != GetAdminUserName() || admin_pwd != GetAdminPwd()) {
-        for (auto ip : iplist) {
-            string grant_string = MySqlStringHelper::GetGrantAdminUserStr(admin_username, admin_pwd, ip);
+        auto host_list = iplist;
+        host_list.push_back("127.0.0.1");
+        host_list.push_back("localhost");
+        for (auto host : host_list) {
+            string grant_string = MySqlStringHelper::GetGrantAdminUserStr(admin_username, admin_pwd, host);
             int ret = Query(grant_string);
             if (ret) {
                 return ret;
             }
             LogVerbose("%s grant %s user %s done", __func__, grant_string.c_str(), admin_username.c_str());
         }
-        string grant_string = MySqlStringHelper::GetGrantAdminUserStr(admin_username, admin_pwd, "127.0.0.1");
-        int ret = Query(grant_string);
-        if (ret) {
-            return ret;
-        }
-        LogVerbose("%s grant %s user %s done", __func__, grant_string.c_str(), admin_username.c_str());
     }
-	//not real change pwd. if change, the connection for other operation will be fail.
-	return OK;
+    //not real change pwd. if change, the connection for other operation will be fail.
+    return OK;
 }
 
 int MySqlManager::CreateReplica(const string &admin_username, const string &replica_username,
