@@ -223,7 +223,7 @@ int EventStorage::AddEvent(const string &gtid, const EventData &event_data, bool
 	}
     ColorLogInfo("%s write data gtid %s instance id %llu checksum %llu ret %d file %s run %u ms", 
 			__func__, event_data.gtid().c_str(), event_data.instance_id(), event_data.checksum(), ret,
-                        data_info.file_name().c_str(), timer.GetTime()/1000 );
+            data_info.file_name().c_str(), timer.GetTime()/1000 );
     return ret;
 }
 
@@ -271,26 +271,28 @@ int EventStorage::GetEvent(EventData *data, bool wait) {
 }
 
 int EventStorage::GetGTIDInfo(const string &gtid, EventDataInfo *data_info, bool lower_bound) {
-    LockManager lock(&mutex_);
     if (lower_bound) {
-        int ret = RealGetLowerBoundGTIDInfo(gtid, data_info);
+		int ret = OK;
+		{
+			LockManager lock(&mutex_);
+			ret = RealGetLowerBoundGTIDInfo(gtid, data_info);
+		}
         if (ret == OK) {
             ret = EventStorage::CheckGtidInData(gtid, *data_info);
         }
         return ret;
     } else {
+		LockManager lock(&mutex_);
         return RealGetGTIDInfo(gtid, data_info);
     }
 }
 
 string EventStorage::GetLastGTIDByUUID(const string &uuid) {
-	LogVerbose("%s get uuid %s",__func__, uuid.c_str());
     LockManager lock(&mutex_);
     return uuid_handler_->GetLastestGTIDByUUID(uuid);
 }
 
 string EventStorage::GetLastGTIDByGTID(const string &gtid) {
-	LogVerbose("%s get gtid %s",__func__, gtid.c_str());
     LockManager lock(&mutex_);
     return uuid_handler_->GetLastestGTIDByGTID(gtid);
 }
@@ -384,8 +386,8 @@ int EventStorage::CheckGtidInData(const string &gtid, const EventDataInfo &data_
         return ret;
     }
 
-    LogVerbose("%s get gtid %s from gtid %s, data size %zu", __func__, gtid.c_str(), event_data.gtid().c_str(),
-                       event_data.data().size());
+    //LogVerbose("%s get gtid %s from gtid %s, data size %zu", __func__, gtid.c_str(), event_data.gtid().c_str(),
+     //                  event_data.data().size());
 
     vector < string > gtid_list;
     string max_gtid;
@@ -433,8 +435,8 @@ int EventStorage::GetLastGtid(const vector<string> &gtid_list, string *gtid) {
             EventDataInfo data_info;
             int find_ret = RealGetLowerBoundGTIDInfo(gtid_list[i], &data_info);
             if (find_ret == OK) {
-                LogVerbose("%s get gtid info %s file_name %s offset %d", __func__, data_info.gtid().c_str(),
-                                   data_info.file_name().c_str(), data_info.offset());
+                //LogVerbose("%s get gtid info %s file_name %s offset %d", __func__, data_info.gtid().c_str(),
+                 //                  data_info.file_name().c_str(), data_info.offset());
                 if (max_data_info < data_info) {
                     int check_ret = CheckGtidInData(gtid_list[i], data_info);
                     if (check_ret == 0) {

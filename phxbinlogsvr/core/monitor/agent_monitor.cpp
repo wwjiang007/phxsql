@@ -163,7 +163,7 @@ int AgentMonitor::CheckRunning() {
     if (read_only == "OFF") {
         if (is_master) {
             MasterInfo master_info;
-            int ret = master_manager_->GetMasterInfo(&master_info);
+            ret = master_manager_->GetMasterInfo(&master_info);
             if (ret == OK) {
                 if (master_info.export_ip().empty()) {
                     //master is running?
@@ -307,31 +307,37 @@ int AgentMonitor::CheckMasterInit() {
 }
 
 int AgentMonitor::IsGTIDCompleted(const Option *option, EventManager *event_manager) {
-    vector < string > gtid_list;
-    int ret = MasterMonitor::GetMySQLMaxGTIDList(option, &gtid_list);
-    if (ret) {
-        ColorLogWarning("%s get sql info fail, skip", __func__);
-        return SVR_FAIL;
-    }
+	vector < string > gtid_list;
+	int ret = MasterMonitor::GetMySQLMaxGTIDList(option, &gtid_list);
+	if (ret) {
+		ColorLogWarning("%s get sql info fail, skip", __func__);
+		return SVR_FAIL;
+	}
 
-    string last_gtid = event_manager->GetNewestGTID();
-    if (MasterMonitor::IsGTIDCompleted(gtid_list, last_gtid)) {
-    } else {
-        return DATA_EMPTY;
-    }
+	string last_gtid = event_manager->GetNewestGTID();
+	if (MasterMonitor::IsGTIDCompleted(gtid_list, last_gtid)) {
+	} else {
+		return DATA_EMPTY;
+	}
 
-    if (AgentExternalMonitor::IsHealthy()) {
-        return OK;
-    }
-    ColorLogWarning("%s external monitor not healthy", __func__);
-    return SVR_FAIL;
+	return OK;
 }
 
 int AgentMonitor::CheckMasterTimeOut() {
-    int ret = IsGTIDCompleted(option_, event_manager_);
-    if (ret < 0) {
-        return ret;
+	bool is_master = master_manager_->CheckMasterBySvrID(option_->GetBinLogSvrConfig()->GetEngineSvrID());
+    int ret = OK;
+	if(!is_master) {
+		ret=IsGTIDCompleted(option_, event_manager_);
+		if (ret < 0) {
+			return ret;
+		}
+	}
+    
+	if (!AgentExternalMonitor::IsHealthy()) {
+		ColorLogWarning("%s external monitor not healthy", __func__);
+        return SVR_FAIL;
     }
+
     if (ret == OK) {
         int ret = master_agent_->SetMaster(option_->GetBinLogSvrConfig()->GetEngineIP());
         if (ret == MASTER_CONFLICT) {
@@ -381,4 +387,3 @@ void AgentMonitor::CheckCheckPointFiles() {
 }
 
 }
-
